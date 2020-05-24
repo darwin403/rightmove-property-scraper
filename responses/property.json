@@ -1,0 +1,119 @@
+{
+  "id": 79642483,
+  "bedrooms": 2,
+  "numberOfImages": 9,
+  "numberOfFloorplans": 0,
+  "numberOfVirtualTours": 1,
+  "summary": "FOR SALE BY THE MODERN METHOD OF AUCTION * STARTING BID £32,000 * RESERVATION FEE APPLIES * HUNTERS AUCTION OFFER THIS 2 BEDROOM CITY CENTRE APARTMENT (BD1). This two bedroom apartment is situated in Bradford city centre and would make a fantastic investment property. Situated close to Bradfor...",
+  "displayAddress": "Upper Millergate, Bradford, BD1 1SX",
+  "countryCode": "GB",
+  "location": {
+    "latitude": 53.79387,
+    "longitude": -1.75526
+  },
+  "propertySubType": "Flat",
+  "listingUpdate": {
+    "listingUpdateReason": "new",
+    "listingUpdateDate": "2020-05-13T10:13:24Z"
+  },
+  "premiumListing": false,
+  "featuredProperty": false,
+  "price": {
+    "amount": 32000,
+    "frequency": "not specified",
+    "currencyCode": "GBP",
+    "displayPrices": [
+      {
+        "displayPrice": "£32,000",
+        "displayPriceQualifier": "Guide Price"
+      }
+    ]
+  },
+  "customer": {
+    "branchId": 33275,
+    "brandPlusLogoURI": "/brand/brand_rmchoice_logo_5736_0000.jpeg",
+    "contactTelephone": "01274 399102",
+    "branchDisplayName": "Hunters, Bradford",
+    "branchName": "Bradford",
+    "brandTradingName": "Hunters",
+    "branchLandingPageUrl": "/estate-agents/agent/Hunters/Bradford-33275.html",
+    "development": false,
+    "showReducedProperties": true,
+    "commercial": false,
+    "showOnMap": true,
+    "brandPlusLogoUrl": "https://media.rightmove.co.uk:443/dir/brand/brand_rmchoice_logo_5736_0000_max_100x50.jpeg"
+  },
+  "distance": null,
+  "transactionType": "buy",
+  "productLabel": {
+    "productLabelText": ""
+  },
+  "commercial": false,
+  "development": false,
+  "residential": true,
+  "students": false,
+  "auction": true,
+  "feesApply": false,
+  "feesApplyText": null,
+  "displaySize": "",
+  "showOnMap": true,
+  "propertyUrl": "/property-for-sale/property-79642483.html",
+  "contactUrl": "/property-for-sale/contactBranch.html?propertyId=79642483",
+  "channel": "BUY",
+  "firstVisibleDate": "2020-05-13T10:13:17Z",
+  "keywords": [],
+  "keywordMatchType": "no_keyword",
+  "saved": null,
+  "hidden": null,
+  "onlineViewingsAvailable": false,
+  "propertyTypeFullDescription": "2 bedroom flat for sale",
+  "propertyImages": {
+    "images": [
+      {
+        "srcUrl": "https://media.rightmove.co.uk:443/dir/crop/10:9-16:9/34k/33275/79642483/33275_BRASP203071_IMG_01_0000_max_476x317.jpg",
+        "url": "34k/33275/79642483/33275_BRASP203071_IMG_01_0000.jpg"
+      },
+      {
+        "srcUrl": "https://media.rightmove.co.uk:443/dir/crop/10:9-16:9/34k/33275/79642483/33275_BRASP203071_IMG_02_0000_max_476x317.jpg",
+        "url": "34k/33275/79642483/33275_BRASP203071_IMG_02_0000.jpg"
+      },
+      {
+        "srcUrl": "https://media.rightmove.co.uk:443/dir/crop/10:9-16:9/34k/33275/79642483/33275_BRASP203071_IMG_03_0000_max_476x317.jpg",
+        "url": "34k/33275/79642483/33275_BRASP203071_IMG_03_0000.jpg"
+      },
+      {
+        "srcUrl": "https://media.rightmove.co.uk:443/dir/crop/10:9-16:9/34k/33275/79642483/33275_BRASP203071_IMG_04_0000_max_476x317.jpg",
+        "url": "34k/33275/79642483/33275_BRASP203071_IMG_04_0000.jpg"
+      },
+      {
+        "srcUrl": "https://media.rightmove.co.uk:443/dir/crop/10:9-16:9/34k/33275/79642483/33275_BRASP203071_IMG_05_0000_max_476x317.jpg",
+        "url": "34k/33275/79642483/33275_BRASP203071_IMG_05_0000.jpg"
+      },
+      {
+        "srcUrl": "https://media.rightmove.co.uk:443/dir/crop/10:9-16:9/34k/33275/79642483/33275_BRASP203071_IMG_06_0000_max_476x317.jpg",
+        "url": "34k/33275/79642483/33275_BRASP203071_IMG_06_0000.jpg"
+      },
+      {
+        "srcUrl": "https://media.rightmove.co.uk:443/dir/crop/10:9-16:9/34k/33275/79642483/33275_BRASP203071_IMG_07_0000_max_476x317.jpg",
+        "url": "34k/33275/79642483/33275_BRASP203071_IMG_07_0000.jpg"
+      },
+      {
+        "srcUrl": "https://media.rightmove.co.uk:443/dir/crop/10:9-16:9/34k/33275/79642483/33275_BRASP203071_IMG_08_0000_max_476x317.jpg",
+        "url": "34k/33275/79642483/33275_BRASP203071_IMG_08_0000.jpg"
+      },
+      {
+        "srcUrl": "https://media.rightmove.co.uk:443/dir/crop/10:9-16:9/34k/33275/79642483/33275_BRASP203071_IMG_09_0000_max_476x317.jpg",
+        "url": "34k/33275/79642483/33275_BRASP203071_IMG_09_0000.jpg"
+      }
+    ],
+    "mainImageSrc": "https://media.rightmove.co.uk:443/dir/crop/10:9-16:9/34k/33275/79642483/33275_BRASP203071_IMG_01_0000_max_476x317.jpg",
+    "mainMapImageSrc": "https://media.rightmove.co.uk:443/dir/crop/10:9-16:9/34k/33275/79642483/33275_BRASP203071_IMG_01_0000_max_296x197.jpg"
+  },
+  "displayStatus": "",
+  "formattedBranchName": " by Hunters, Bradford",
+  "addedOrReduced": "Added on 13/05/2020",
+  "isRecent": false,
+  "formattedDistance": "",
+  "heading": "",
+  "hasBrandPlus": true
+}
