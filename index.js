@@ -183,14 +183,14 @@ const identifiers = ["OUTCODE^155"];
 Promise.map(
   identifiers,
   (i) => {
-    fetch_all_properties(i, "", "", "RENT").then((properties) => {
-      const stats = gather_stats(uniqBy(properties, "id"));
-      console.log(`Indentifier: ${i} Stats:`, stats);
-    });
-    Promise.map(
+    // fetch_all_properties(i, "", "", "RENT").then((properties) => {
+    //   const stats = gather_stats(uniqBy(properties, "id"));
+    //   console.log(`Indentifier: ${i} Stats:`, stats);
+    // });
+    return Promise.map(
       types,
       (t) => {
-        Promise.map(bedrooms, async (b) => {
+        return Promise.map(bedrooms, async (b) => {
           fetch_all_properties(i, t.propertyType, b, "RENT").then(
             (properties) => {
               const stats = gather_stats(uniqBy(properties, "id"));
@@ -202,8 +202,8 @@ Promise.map(
           console.log(`Type: ${t.name} Rooms: ${b} Lowest:`, lowest);
         });
       },
-      { concurrency: 3 }
+      { concurrency: 1 }
     );
   },
-  { concurrency: 3 }
+  { concurrency: 1 }
 );
