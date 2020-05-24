@@ -154,7 +154,7 @@ async function fetch_lowest_sale(identifier, propertyType, bedrooms) {
   return price;
 }
 
-const bedrooms = range(3, 6);
+const bedrooms = range(1, 5);
 const types = [
   {
     name: "Flat",
@@ -180,19 +180,30 @@ const types = [
 
 const identifiers = ["OUTCODE^155"];
 
-identifiers.forEach((i) => {
-  fetch_all_properties(i, "", "", "RENT").then((properties) => {
-    const stats = gather_stats(uniqBy(properties, "id"));
-    console.log(`Indentifier: ${i} Stats:`, stats);
-  });
-  types.forEach((t) => {
-    bedrooms.forEach(async (b) => {
-      fetch_all_properties(i, t.propertyType, b, "RENT").then((properties) => {
-        const stats = gather_stats(uniqBy(properties, "id"));
-        console.log(`Type: ${t.name} Rooms: ${b} Stats:`, stats);
-      });
-      const lowest = await fetch_lowest_sale(i, t.propertyType, b);
-      console.log(`Type: ${t.name} Rooms: ${b} Lowest:`, lowest);
+Promise.map(
+  identifiers,
+  (i) => {
+    fetch_all_properties(i, "", "", "RENT").then((properties) => {
+      const stats = gather_stats(uniqBy(properties, "id"));
+      console.log(`Indentifier: ${i} Stats:`, stats);
     });
-  });
-});
+    Promise.map(
+      types,
+      (t) => {
+        Promise.map(bedrooms, async (b) => {
+          fetch_all_properties(i, t.propertyType, b, "RENT").then(
+            (properties) => {
+              const stats = gather_stats(uniqBy(properties, "id"));
+              console.log(`Type: ${t.name} Rooms: ${b} Stats:`, stats);
+            },
+            { concurrency: 3 }
+          );
+          const lowest = await fetch_lowest_sale(i, t.propertyType, b);
+          console.log(`Type: ${t.name} Rooms: ${b} Lowest:`, lowest);
+        });
+      },
+      { concurrency: 3 }
+    );
+  },
+  { concurrency: 3 }
+);
