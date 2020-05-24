@@ -154,7 +154,7 @@ async function fetch_lowest_sale(identifier, propertyType, bedrooms) {
   return price;
 }
 
-const bedrooms = range(1, 5);
+const bedrooms = range(1, 9);
 const types = [
   {
     name: "Flat",
@@ -178,7 +178,7 @@ const types = [
   },
 ];
 
-const identifiers = ["OUTCODE^155"];
+const identifiers = ["OUTCODE^1568"];
 
 Promise.map(
   identifiers,
@@ -195,15 +195,14 @@ Promise.map(
             (properties) => {
               const stats = gather_stats(uniqBy(properties, "id"));
               console.log(`Type: ${t.name} Rooms: ${b} Stats:`, stats);
-            },
-            { concurrency: 3 }
+            }
           );
           const lowest = await fetch_lowest_sale(i, t.propertyType, b);
           console.log(`Type: ${t.name} Rooms: ${b} Lowest:`, lowest);
         });
       },
-      { concurrency: 1 }
+      { concurrency: 3 }
     );
   },
-  { concurrency: 1 }
+  { concurrency: 3 }
 );
