@@ -2,6 +2,10 @@ const Promise = require("bluebird");
 const excel = require("exceljs");
 const path = require("path");
 const fs = require("fs");
+const readline = require("readline").createInterface({
+  input: process.stdin,
+  output: process.stdout,
+});
 
 const log = require("./utils/logger");
 const { loadIdentifiers, stopwords } = require("./lib/load");
@@ -12,7 +16,7 @@ const {
   statsOfProperties,
 } = require("./lib/property");
 
-const OUTPUT_FILE = path.resolve(__dirname, "dumps/output.xlsx");
+const OUTPUT_FILE = path.resolve(process.cwd(), "dumps/output.xlsx");
 
 // create output file's directories
 const dir = path.dirname(OUTPUT_FILE);
@@ -134,9 +138,9 @@ async function main() {
               );
               const tbStats = statsOfProperties(tbProperties);
               log.info(
-                `[${pin}] type: ${t.name} bedrooms: ${b} stats: ${Object.values(
-                  tbStats
-                ).join(",")}`
+                `[${pin}] type: ${
+                  t.name
+                }, bedrooms: ${b}, stats: ${Object.values(tbStats).join(",")}`
               );
 
               const tbSaleLowest = await fetchLowestSaleProperty(
@@ -145,7 +149,7 @@ async function main() {
                 b
               );
               log.info(
-                `[${pin}] type: ${t.name} bedrooms: ${b} lowest: ${tbSaleLowest}`
+                `[${pin}] type: ${t.name}, bedrooms: ${b}, lowest: ${tbSaleLowest}`
               );
 
               rowPinData = {
@@ -161,14 +165,14 @@ async function main() {
           )
             .then(() => {
               log.info(
-                `[${pin}] type: ${t.name} bedrooms (${BEDROOMS.join(
+                `[${pin}] type: ${t.name}, bedrooms (${BEDROOMS.join(
                   ","
                 )}): all done.`
               );
             })
             .catch((err) => {
               log.error(
-                `[${pin}] type: ${t.name} bedrooms (${BEDROOMS.join(
+                `[${pin}] type: ${t.name}, bedrooms (${BEDROOMS.join(
                   ","
                 )}): failed: ${err.stack}`
               );
@@ -208,6 +212,11 @@ async function main() {
         })
         .catch((err) => {
           log.error(`output save failed: ${err.stack}`);
+        })
+        .finally(() => {
+          readline.question("Press any key to continue ...", (name) => {
+            readline.close();
+          });
         });
     });
 }
