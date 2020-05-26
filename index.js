@@ -1,208 +1,215 @@
-const fs = require("fs");
-const fetch = require("node-fetch");
 const Promise = require("bluebird");
-const uniqBy = require("lodash/uniqBy");
-const cheerio = require("cheerio");
+const excel = require("exceljs");
+const path = require("path");
+const fs = require("fs");
 
-const { log, range } = require("./utils");
-let stopwords = require("./stopwords.json");
+const log = require("./utils/logger");
+const { loadIdentifiers, stopwords } = require("./lib/load");
 
-stopwords = stopwords.map((i) => i.toLowerCase());
+const {
+  fetchAllProperties,
+  fetchLowestSaleProperty,
+  statsOfProperties,
+} = require("./lib/property");
 
-log.info("Started");
+const OUTPUT_FILE = path.resolve(__dirname, "dumps/output.xlsx");
 
-function fetch_property(identifier, propertyType, bedrooms, offset, type) {
-  let url;
-  if (type === "BUY") {
-    url = `https://www.rightmove.co.uk/api/_search?locationIdentifier=${identifier}&maxBedrooms=${bedrooms}&minBedrooms=${bedrooms}&numberOfPropertiesPerPage=24&radius=0.0&sortType=6&viewType=LIST&channel=${type}&propertyTypes=${propertyType}&index=${offset}`;
-  } else {
-    url = `https://www.rightmove.co.uk/api/_search?locationIdentifier=${identifier}&maxBedrooms=${bedrooms}&minBedrooms=${bedrooms}&numberOfPropertiesPerPage=24&radius=0.0&sortType=6&includeLetAgreed=true&viewType=LIST&channel=${type}&propertyTypes=${propertyType}&index=${offset}`;
+// create output file's directories
+const dir = path.dirname(OUTPUT_FILE);
+if (!fs.existsSync(dir)) {
+  try {
+    fs.mkdirSync(dir);
+  } catch (err) {
+    log.error(`output dir create failed: ${err.stack}`);
   }
-
-  return fetch(url)
-    .then((response) => response.json())
-    .then((response) => {
-      if (!response["resultCount"] || !response["properties"])
-        throw new Error(`Unexpected response for: ${url}`);
-      return response;
-    });
 }
 
-function fetch_all_properties(identifier, propertyType, bedrooms, type) {
-  return fetch_property(identifier, propertyType, bedrooms, 0, type).then(
-    (l) => {
-      const firstProperties = l["properties"];
-      const total = parseInt(l["resultCount"].replace(/,/g, ""));
-      const chunks = range(24, total, 24);
+const CONCURRENCY = {
+  pins: 2,
+  propertyTypes: 3,
+  bedrooms: 3,
+};
 
-      return Promise.mapSeries(chunks, function (offset) {
-        return fetch_property(
-          identifier,
-          propertyType,
-          bedrooms,
-          offset,
-          type
-        ).then((k) => k["properties"]);
-      }).then((paginateProperties) =>
-        firstProperties.concat(paginateProperties.flat())
-      );
-    }
-  );
-}
-
-function gather_stats(rentProperties) {
-  const letQualifier = (p) => p["displayStatus"] == "Let agreed";
-  const letProperties = rentProperties.filter(letQualifier);
-
-  const rentCount = rentProperties.length;
-  const letCount = letProperties.length;
-
-  const averageReducer = (k, p) => k + p["price"]["amount"];
-  const letAveragePrice = letProperties.reduce(averageReducer, 0);
-  const letPercentage =
-    rentCount !== 0 ? ((letCount / rentCount) * 100).toFixed(2) : 0;
-
-  return [letAveragePrice, rentCount, letCount, letPercentage];
-}
-
-async function propertyHasAStopword(property, stopwords) {
-  // search summary
-  if (stopwords.some((s) => property["summary"].toLowerCase().includes(s))) {
-    return true;
-  }
-
-  // search display prices
-  if (
-    stopwords.some((s) => {
-      const displayPrices = property["price"]["displayPrices"];
-      for (let j = 0; j < displayPrices.length; j++) {
-        const displayPriceQualifier = displayPrices[j]["displayPriceQualifier"];
-        if (displayPriceQualifier.toLowerCase().includes(s)) return true;
-      }
-      return false;
-    })
-  ) {
-    return true;
-  }
-
-  let foundOnPage = false;
-
-  const response = await fetch(
-    "https://www.rightmove.co.uk" + property["propertyUrl"]
-  );
-  const text = await response.text();
-  const $ = cheerio.load(text);
-
-  // search key features
-  $("div.key-features > ul > li").each(function () {
-    const keyFeature = $(this).text().toLowerCase();
-    if (stopwords.some((s) => keyFeature.includes(s))) {
-      foundOnPage = true;
-    }
-  });
-
-  // search description
-  const description = $('[itemprop="description"]').text();
-  if (stopwords.some((s) => description.toLowerCase().includes(s))) {
-    foundOnPage = true;
-  }
-
-  if (foundOnPage) {
-    return true;
-  }
-
-  return false;
-}
-
-async function fetch_lowest_sale(identifier, propertyType, bedrooms) {
-  let maxPages = 1000; // set after first page response
-  let currentPage = 1;
-
-  let price = 0;
-
-  pages: while (currentPage <= maxPages) {
-    const r = await fetch_property(
-      identifier,
-      propertyType,
-      bedrooms,
-      (currentPage - 1) * 24,
-      "BUY"
-    );
-
-    const total = parseInt(r["resultCount"].replace(/,/g, ""));
-    const pp = r["properties"];
-
-    const properties = JSON.parse(JSON.stringify(pp));
-
-    // sort by lowest property price (including featured)
-    properties.sort((p1, p2) => p1["price"]["amount"] - p2["price"]["amount"]);
-
-    for (let i = 0; i < properties.length; i++) {
-      const p = properties[i];
-      const hasAStopword = await propertyHasAStopword(p, stopwords);
-      if (!hasAStopword) {
-        price = p["price"]["amount"];
-        break pages;
-      }
-    }
-
-    currentPage += 1;
-
-    maxPages = range(0, total, 24).length;
-  }
-
-  return price;
-}
-
-const bedrooms = range(1, 9);
-const types = [
+const COLUMN_OFFSET = 0;
+const BEDROOMS = [1, 2, 3, 4, 5, 6, 7, 8];
+const TYPES = [
   {
     name: "Flat",
     propertyType: "flat",
+    key: "f",
   },
   {
     name: "Terraced",
     propertyType: "terraced",
+    key: "t",
   },
   {
     name: "Semi-Detached",
     propertyType: "semi-detached",
+    key: "s",
   },
   {
     name: "Detached",
     propertyType: "detached",
+    key: "d",
   },
   {
     name: "Bungalow",
     propertyType: "bungalow",
+    key: "b",
   },
 ];
 
-const identifiers = ["OUTCODE^1568"];
+let COLUMNS = [
+  { key: "pin", header: "Pin Code" },
+  { key: "totalLetAverage", header: "Total Average" },
+  { key: "totalRentCount", header: "Total Rent" },
+  { key: "totalLetCount", header: "Total Let" },
+  { key: "totalLetPercentage", header: "% Let" },
+];
 
-Promise.map(
-  identifiers,
-  (i) => {
-    // fetch_all_properties(i, "", "", "RENT").then((properties) => {
-    //   const stats = gather_stats(uniqBy(properties, "id"));
-    //   console.log(`Indentifier: ${i} Stats:`, stats);
-    // });
-    return Promise.map(
-      types,
-      (t) => {
-        return Promise.map(bedrooms, async (b) => {
-          fetch_all_properties(i, t.propertyType, b, "RENT").then(
-            (properties) => {
-              const stats = gather_stats(uniqBy(properties, "id"));
-              console.log(`Type: ${t.name} Rooms: ${b} Stats:`, stats);
-            }
+TYPES.forEach((t) => {
+  BEDROOMS.forEach((b) => {
+    COLUMNS = COLUMNS.concat([
+      { key: `${t.key}${b}LetAverage`, header: `${b} Average` },
+      { key: `${t.key}${b}RentCount`, header: `${b} Rent` },
+      { key: `${t.key}${b}LetCount`, header: `${b} Let` },
+      { key: `${t.key}${b}LetPercentage`, header: `${b} % Let` },
+      { key: `${t.key}${b}SaleLowest`, header: `${b} Lowest` },
+    ]);
+  });
+});
+
+async function main() {
+  log.info("bot started!");
+
+  const locationIdentifiers = await loadIdentifiers();
+  const pins = Object.keys(locationIdentifiers);
+
+  log.info(`pins loaded: ${Object.keys(locationIdentifiers).length} pins`);
+  log.info(`stopwords loaded: ${stopwords.length} stopwords`);
+
+  // create excel file
+  var wb = new excel.Workbook();
+  var ws = wb.addWorksheet("RightMove");
+  ws.columns = COLUMNS;
+
+  const rows = [];
+
+  await Promise.map(
+    pins,
+    async (pin) => {
+      log.info(`[${pin}] fetching ...`);
+      const locationIdentifier = locationIdentifiers[pin];
+      const allProperties = await fetchAllProperties(
+        locationIdentifier,
+        "",
+        "",
+        "RENT"
+      );
+
+      let totalStats = statsOfProperties(allProperties);
+
+      let rowPinData = {
+        pin: pin,
+        totalLetAverage: totalStats.letAveragePrice,
+        totalRentCount: totalStats.rentCount,
+        totalLetCount: totalStats.letCount,
+        totalLetPercentage: totalStats.letPercentage,
+      };
+
+      log.info(`[${pin}] total stats: ${Object.values(totalStats).join(",")}`);
+
+      return Promise.map(
+        TYPES,
+        (t) => {
+          return Promise.map(
+            BEDROOMS,
+            async (b) => {
+              const tbProperties = await fetchAllProperties(
+                locationIdentifier,
+                t.propertyType,
+                b,
+                "RENT"
+              );
+              const tbStats = statsOfProperties(tbProperties);
+              log.info(
+                `[${pin}] type: ${t.name} bedrooms: ${b} stats: ${Object.values(
+                  tbStats
+                ).join(",")}`
+              );
+
+              const tbSaleLowest = await fetchLowestSaleProperty(
+                locationIdentifier,
+                t.propertyType,
+                b
+              );
+              log.info(
+                `[${pin}] type: ${t.name} bedrooms: ${b} lowest: ${tbSaleLowest}`
+              );
+
+              rowPinData = {
+                ...rowPinData,
+                [`${t.key}${b}LetAverage`]: tbStats.letAveragePrice,
+                [`${t.key}${b}RentCount`]: tbStats.rentCount,
+                [`${t.key}${b}LetCount`]: tbStats.letCount,
+                [`${t.key}${b}LetPercentage`]: tbStats.letPercentage,
+                [`${t.key}${b}SaleLowest`]: tbSaleLowest,
+              };
+            },
+            { concurrency: CONCURRENCY.bedrooms }
+          )
+            .then(() => {
+              log.info(
+                `[${pin}] type: ${t.name} bedrooms (${BEDROOMS.join(
+                  ","
+                )}): all done.`
+              );
+            })
+            .catch((err) => {
+              log.error(
+                `[${pin}] type: ${t.name} bedrooms (${BEDROOMS.join(
+                  ","
+                )}): failed: ${err.stack}`
+              );
+            });
+        },
+        { concurrency: CONCURRENCY.propertyTypes }
+      )
+        .then(() => {
+          rows.push(rowPinData);
+          log.info(
+            `[${pin}] types (${TYPES.map((i) => i.name).join(",")}): all done.`
           );
-          const lowest = await fetch_lowest_sale(i, t.propertyType, b);
-          console.log(`Type: ${t.name} Rooms: ${b} Lowest:`, lowest);
+        })
+        .catch((err) => {
+          log.error(
+            `[${pin}] types (${TYPES.map((i) => i.name).join(",")}): failed: ${
+              err.stack
+            }`
+          );
         });
-      },
-      { concurrency: 3 }
-    );
-  },
-  { concurrency: 3 }
-);
+    },
+    { concurrency: CONCURRENCY.pins }
+  )
+    .then(() => {
+      log.info("saving data to file");
+    })
+    .catch((err) => {
+      log.err(`pins promise failed: ${err.stack}`);
+    })
+    .finally(async function () {
+      ws.addRows(rows);
+      wb.xlsx
+        .writeFile(OUTPUT_FILE)
+        .then(function () {
+          log.info(`saved ${rows.length} rows to file. all done!`);
+          log.info(`bot completed.`);
+        })
+        .catch((err) => {
+          log.error(`output save failed: ${err.stack}`);
+        });
+    });
+}
+
+main();
