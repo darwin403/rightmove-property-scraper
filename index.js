@@ -200,7 +200,7 @@ async function main() {
       log.info("saving data to file");
     })
     .catch((err) => {
-      log.err(`pins promise failed: ${err.stack}`);
+      log.error(`pins promise failed: ${err.stack}`);
     })
     .finally(async function () {
       ws.addRows(rows);
