@@ -203,21 +203,31 @@ async function main() {
       log.error(`pins promise failed: ${err.stack}`);
     })
     .finally(async function () {
+      // sort results by pins
+      rows.sort((a, b) => a["pin"] - b["pin"]);
+
+      // push rows
       ws.addRows(rows);
-      wb.xlsx
-        .writeFile(OUTPUT_FILE)
-        .then(function () {
+
+      let createAttempts = 0;
+
+      // create file
+      attempts: while (createAttempts <= 3) {
+        try {
+          await wb.xlsx.writeFile(OUTPUT_FILE);
           log.info(`saved ${rows.length} rows to file. all done!`);
           log.info(`bot completed.`);
-        })
-        .catch((err) => {
+          break attempts;
+        } catch (err) {
           log.error(`output save failed: ${err.stack}`);
-        })
-        .finally(() => {
-          readline.question("Press any key to continue ...", (name) => {
-            readline.close();
-          });
-        });
+          createAttempts++;
+        }
+      }
+
+      // pause program for .exe close
+      readline.question("Press any key to continue ...", () => {
+        readline.close();
+      });
     });
 }
 
