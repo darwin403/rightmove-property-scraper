@@ -1,9 +1,11 @@
 {
   "name": "bot-rightmove",
   "dependencies": {
+    "abort-controller": "^3.0.0",
     "bluebird": "^3.7.2",
     "cheerio": "^1.0.0-rc.3",
     "exceljs": "^3.9.0",
+    "is-online": "^8.3.1",
     "lodash": "^4.17.15",
     "node-fetch": "^2.6.0",
     "pkg": "^4.4.8",
@@ -11,7 +13,8 @@
   },
   "bin": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "build": "pkg package.json --out-path build"
+    "start": "NODE_ENV=production node index.js",
+    "develop": "node index.js",
+    "build": "NODE_ENV=production pkg package.json --out-path build"
   }
 }

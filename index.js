@@ -1,110 +1,35 @@
 const Promise = require("bluebird");
-const excel = require("exceljs");
-const path = require("path");
-const fs = require("fs");
 const readline = require("readline").createInterface({
   input: process.stdin,
   output: process.stdout,
 });
 
 const log = require("./utils/logger");
+let { CONCURRENCY, TYPES, BEDROOMS } = require("./config");
 const { loadIdentifiers, stopwords } = require("./lib/load");
-
+const saveRows = require("./lib/excel");
 const {
   fetchAllProperties,
   fetchLowestSaleProperty,
   statsOfProperties,
 } = require("./lib/property");
 
-const OUTPUT_FILE = path.resolve(process.cwd(), "dumps/output.xlsx");
-
-// create output file's directories
-const dir = path.dirname(OUTPUT_FILE);
-if (!fs.existsSync(dir)) {
-  try {
-    fs.mkdirSync(dir);
-  } catch (err) {
-    log.error(`output dir create failed: ${err.stack}`);
-  }
-}
-
-const CONCURRENCY = {
-  pins: 2,
-  propertyTypes: 3,
-  bedrooms: 3,
-};
-
-const COLUMN_OFFSET = 0;
-const BEDROOMS = [1, 2, 3, 4, 5, 6, 7, 8];
-const TYPES = [
-  {
-    name: "Flat",
-    propertyType: "flat",
-    key: "f",
-  },
-  {
-    name: "Terraced",
-    propertyType: "terraced",
-    key: "t",
-  },
-  {
-    name: "Semi-Detached",
-    propertyType: "semi-detached",
-    key: "s",
-  },
-  {
-    name: "Detached",
-    propertyType: "detached",
-    key: "d",
-  },
-  {
-    name: "Bungalow",
-    propertyType: "bungalow",
-    key: "b",
-  },
-];
-
-let COLUMNS = [
-  { key: "pin", header: "Pin Code" },
-  { key: "totalLetAverage", header: "Total Average" },
-  { key: "totalRentCount", header: "Total Rent" },
-  { key: "totalLetCount", header: "Total Let" },
-  { key: "totalLetPercentage", header: "% Let" },
-];
-
-TYPES.forEach((t) => {
-  BEDROOMS.forEach((b) => {
-    COLUMNS = COLUMNS.concat([
-      { key: `${t.key}${b}LetAverage`, header: `${b} Average` },
-      { key: `${t.key}${b}RentCount`, header: `${b} Rent` },
-      { key: `${t.key}${b}LetCount`, header: `${b} Let` },
-      { key: `${t.key}${b}LetPercentage`, header: `${b} % Let` },
-      { key: `${t.key}${b}SaleLowest`, header: `${b} Lowest` },
-    ]);
-  });
-});
-
-async function main() {
+async function start() {
   log.info("bot started!");
 
   const locationIdentifiers = await loadIdentifiers();
-  const pins = Object.keys(locationIdentifiers);
+  const postcodes = Object.keys(locationIdentifiers);
 
-  log.info(`pins loaded: ${Object.keys(locationIdentifiers).length} pins`);
+  log.info(`postcodes loaded: ${Object.keys(locationIdentifiers).length} postcodes`);
   log.info(`stopwords loaded: ${stopwords.length} stopwords`);
-
-  // create excel file
-  var wb = new excel.Workbook();
-  var ws = wb.addWorksheet("RightMove");
-  ws.columns = COLUMNS;
 
   const rows = [];
 
   await Promise.map(
-    pins,
-    async (pin) => {
-      log.info(`[${pin}] fetching ...`);
-      const locationIdentifier = locationIdentifiers[pin];
+    postcodes,
+    async (postcode) => {
+      log.info(`[${postcode}] fetching ...`);
+      const locationIdentifier = locationIdentifiers[postcode];
       const allProperties = await fetchAllProperties(
         locationIdentifier,
         "",
@@ -115,14 +40,14 @@ async function main() {
       let totalStats = statsOfProperties(allProperties);
 
       let rowPinData = {
-        pin: pin,
+        postcode: postcode,
         totalLetAverage: totalStats.letAveragePrice,
         totalRentCount: totalStats.rentCount,
         totalLetCount: totalStats.letCount,
         totalLetPercentage: totalStats.letPercentage,
       };
 
-      log.info(`[${pin}] total stats: ${Object.values(totalStats).join(",")}`);
+      log.info(`[${postcode}] total stats: ${Object.values(totalStats).join(",")}`);
 
       return Promise.map(
         TYPES,
@@ -138,7 +63,7 @@ async function main() {
               );
               const tbStats = statsOfProperties(tbProperties);
               log.info(
-                `[${pin}] type: ${
+                `[${postcode}] type: ${
                   t.name
                 }, bedrooms: ${b}, stats: ${Object.values(tbStats).join(",")}`
               );
@@ -149,7 +74,7 @@ async function main() {
                 b
               );
               log.info(
-                `[${pin}] type: ${t.name}, bedrooms: ${b}, lowest: ${tbSaleLowest}`
+                `[${postcode}] type: ${t.name}, bedrooms: ${b}, lowest: ${tbSaleLowest}`
               );
 
               rowPinData = {
@@ -165,14 +90,14 @@ async function main() {
           )
             .then(() => {
               log.info(
-                `[${pin}] type: ${t.name}, bedrooms (${BEDROOMS.join(
+                `[${postcode}] type: ${t.name}, bedrooms (${BEDROOMS.join(
                   ","
                 )}): all done.`
               );
             })
             .catch((err) => {
               log.error(
-                `[${pin}] type: ${t.name}, bedrooms (${BEDROOMS.join(
+                `[${postcode}] type: ${t.name}, bedrooms (${BEDROOMS.join(
                   ","
                 )}): failed: ${err.stack}`
               );
@@ -183,46 +108,28 @@ async function main() {
         .then(() => {
           rows.push(rowPinData);
           log.info(
-            `[${pin}] types (${TYPES.map((i) => i.name).join(",")}): all done.`
+            `[${postcode}] types (${TYPES.map((i) => i.name).join(",")}): all done.`
           );
         })
         .catch((err) => {
           log.error(
-            `[${pin}] types (${TYPES.map((i) => i.name).join(",")}): failed: ${
+            `[${postcode}] types (${TYPES.map((i) => i.name).join(",")}): failed: ${
               err.stack
             }`
           );
         });
     },
-    { concurrency: CONCURRENCY.pins }
+    { concurrency: CONCURRENCY.postcodes }
   )
     .then(() => {
       log.info("saving data to file");
     })
     .catch((err) => {
-      log.error(`pins promise failed: ${err.stack}`);
+      log.error(`postcodes promise failed: ${err.stack}`);
     })
     .finally(async function () {
-      // sort results by pins
-      rows.sort((a, b) => a["pin"] - b["pin"]);
-
-      // push rows
-      ws.addRows(rows);
-
-      let createAttempts = 0;
-
-      // create file
-      attempts: while (createAttempts <= 3) {
-        try {
-          await wb.xlsx.writeFile(OUTPUT_FILE);
-          log.info(`saved ${rows.length} rows to file. all done!`);
-          log.info(`bot completed.`);
-          break attempts;
-        } catch (err) {
-          log.error(`output save failed: ${err.stack}`);
-          createAttempts++;
-        }
-      }
+      // save rows
+      await saveRows(rows);
 
       // pause program for .exe close
       readline.question("Press any key to continue ...", () => {
@@ -231,4 +138,4 @@ async function main() {
     });
 }
 
-main();
+start();
