@@ -20,7 +20,7 @@ async function start() {
   const locationIdentifiers = await loadIdentifiers();
   const postcodes = Object.keys(locationIdentifiers);
 
-  log.info(`postcodes loaded: ${Object.keys(locationIdentifiers).length} postcodes`);
+  log.info(`postcodes loaded: ${Object.keys(locationIdentifiers).length} valid postcodes`);
   log.info(`stopwords loaded: ${stopwords.length} stopwords`);
 
   const rows = [];
