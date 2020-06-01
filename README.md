@@ -16,5 +16,4 @@
 
 # Todo
 
-- Lower case stopwords
-- Paginate for lowest price
+- Remove bad outcodes like: LU95
