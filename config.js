@@ -6,6 +6,7 @@ const CONCURRENCY = {
   propertyTypes: 3,
   bedrooms: 2,
   pages: 3,
+  postcodes: 10,
 };
 
 const TYPES = [
